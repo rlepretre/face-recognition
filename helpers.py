@@ -9,7 +9,7 @@ def normalize(img):
 
     faces = face_cascade.detectMultiScale(gray, 1.4, 5)
     for (x,y,w,h) in faces:
-        img = cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
+        # img = cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
         roi_gray = gray[y:y+h, x:x+w]
         eyes = eye_cascade.detectMultiScale(roi_gray, 1.3)
         eyes_centers = []
@@ -65,22 +65,12 @@ def normalize(img):
 
     return None, [], 0, 0
 
-def addOverlay(img, virtual_object, left_eye, mask_left_eye, ratio, angle):
+def addOverlay(img, virtual_object, left_eye, mask_left_eye, ratio, theta):
 
     mask_left_eye = (mask_left_eye*ratio).astype(np.int32)
-    print(left_eye)
-    print(mask_left_eye)
     scaled_height = int(virtual_object.shape[1] * ratio) 
     scaled_width = int(virtual_object.shape[0] * ratio) 
     virtual_object = cv2.resize(virtual_object, (scaled_height,scaled_width), interpolation = cv2.INTER_AREA)
-
-    y = int(left_eye[1] - mask_left_eye[1])
-    x = int(left_eye[0] - mask_left_eye[0])
-
-    background_width = img.shape[1]
-    background_height = img.shape[0]
-
-    h, w = virtual_object.shape[0], virtual_object.shape[1]
 
     lower_green = np.array([0, 100, 0])     ##[R value, G value, B value]
     upper_green = np.array([120, 255, 100]) 
@@ -89,7 +79,27 @@ def addOverlay(img, virtual_object, left_eye, mask_left_eye, ratio, angle):
     inv_mask = np.bitwise_not(mask)
     mask = mask*255
     inv_mask = inv_mask*255
-    
+
+
+    alpha = np.cos(theta)
+    beta = np.sin(theta)
+
+    R = np.array([
+        [alpha, beta, (1 - alpha) * mask_left_eye[0] - beta * mask_left_eye[1]],
+        [-beta, alpha, beta * mask_left_eye[0] + (1 - alpha) * mask_left_eye[1]]
+            ])
+
+    virtual_object = cv2.warpAffine(virtual_object,R,(scaled_width,scaled_height))
+    mask = cv2.warpAffine(mask,R,(scaled_width,scaled_height))
+    inv_mask = cv2.warpAffine(inv_mask,R,(scaled_width,scaled_height))
+
+    left_eye = R.dot(left_eye)
+    mask_left_eye = R.dot(mask_left_eye)
+
+    y = int(left_eye[1] - mask_left_eye[1])
+    x = int(left_eye[0] - mask_left_eye[0])
+
+    h, w = virtual_object.shape[0], virtual_object.shape[1]
 
     img[y:y+h, x:x+w] = inv_mask * virtual_object + img[y:y+h, x:x+w] * mask
 

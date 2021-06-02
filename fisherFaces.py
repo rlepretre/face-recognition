@@ -31,26 +31,27 @@ def fisherFaces(training_set):
     #Determines the mean face mu
     mu = np.mat(np.mean(x, axis = 1)).T
 
-    i = 0
     for c in range(len(my_classes_set)):
-        class_amount = np.count_nonzero(my_classes == c+1)
+        class_index = np.nonzero(my_classes == c+1)
 
         #Determines the mean face of each class mu_i
-        class_means[:,c] = np.mat(np.mean(x[:,i:i+class_amount], axis = 1))
+        class_means[:,c] = np.mat(np.mean(x[:,class_index[0]], axis = 1))
+        # class_reshaped = np.reshape(class_means[:,c], (56,46)).astype(np.uint8)
+        # cv2.imshow('image',class_reshaped)
+        # key = cv2.waitKey(0)
+        # if key == 27: # exit on ESC key
+        #     break
         
-        #Tiles the mean vectors 
-        class_mean = np.tile(class_means[:,c], (class_amount,1))
-        global_mean_tiled = np.tile(mu, (1,class_amount)) 
+
 
         #Computes S_w and S_b
-        S_w = S_w + np.dot((x[:,i:i+class_amount] - class_mean.T), (x[:,i:i+class_amount] - class_mean.T).T)
-        S_b = S_b + class_amount*np.dot((class_mean - global_mean_tiled.T).T,(class_mean - global_mean_tiled.T))
+        S_w = S_w + np.dot((x[:,class_index[0]] - np.mat(class_means[:,c]).T), (x[:,class_index[0]] - np.mat(class_means[:,c]).T).T)
+        S_b = S_b + class_index[0].size*np.dot((np.mat(class_means[:,c]).T - mu),(np.mat(class_means[:,c]).T - mu).T)
 
-        #Increment i by n_i (the amount of x_i per class)
-        i = i + class_amount
-
+    
     #Computes W_pca with the eigenfaces algorithm
     A , W_pca, Y_pca = pca(x, mu, len(my_classes_set))
+
 
     #Computes S_b and S_w with the curves on top (W_pca.T * S_b * W_pca) and 
     S_b_curve = np.linalg.multi_dot([W_pca.T, S_b, W_pca]) 
@@ -61,14 +62,14 @@ def fisherFaces(training_set):
     larger_eigenvalue, larger_eigenvectors = np.linalg.eig(final_matrix)
     m = len(my_classes_set) - 1
     index = larger_eigenvalue.argsort()
-    W_fld = larger_eigenvectors[:,index[-m:]]
+    W_fld = larger_eigenvectors[:,index[-m:]].real
 
     #Find Y_fld
-    Y_fld = np.linalg.multi_dot([W_fld.T.real, W_pca.T, A]) 
+    Y_fld = np.linalg.multi_dot([W_fld.T, W_pca.T, A]) 
 
     Y_fld = Y_fld.astype(np.float32)
     my_classes = my_classes.astype(np.float32)
 
-    return Y_fld.T, W_pca, W_fld, my_classes
+    return Y_fld.T, W_pca, W_fld, my_classes, mu
 
 

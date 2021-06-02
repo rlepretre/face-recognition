@@ -10,7 +10,7 @@ for filename in os.listdir('myFaceDB/originals'):
     if filename.endswith(".jpg"):
         print('processing: ' + filename)
         img = cv2.imread('myFaceDB/originals/' + filename)
-        img, eyes, angle = normalize(img)
+        img, left_eye, theta, eyes_dist = normalize(img)
         if img is not None:
             cv2.imwrite('myFaceDB/normalized/' + filename, img)
 
