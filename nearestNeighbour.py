@@ -3,7 +3,7 @@ from fisherFaces import fisherFaces
 import csv
 import numpy as np
 
-Y_train, W_pca, W_fld,  myTrainingClasses, mu  = fisherFaces('./faceDB_20_21/training/')
+Y_train, W_pca, W_fld,  my_training_classes, mu  = fisherFaces('./faceDB_20_21/training/')
 
 x = np.empty((0,2576))
 with open('./faceDB_20_21/test/' + 'classes.csv', 'r') as csvfile:
@@ -22,10 +22,13 @@ x = x.T
 
 Y_test = np.linalg.multi_dot([W_fld.T, W_pca.T, x - mu]).T 
 knn = cv2.ml.KNearest_create()
-knn.train(Y_train, cv2.ml.ROW_SAMPLE, myTrainingClasses)
-i = 0
+knn.train(Y_train, cv2.ml.ROW_SAMPLE, my_training_classes)
+
 Y_test = Y_test.astype(np.float32)
 
 ret, results, neighbours, dist = knn.findNearest(Y_test, 1)
 count = np.count_nonzero((results.T == my_classes) == True)
-print(count/len(my_classes))
+index = np.nonzero((results.T == my_classes) == False)
+print(np.mean(dist[index[1]]))
+
+

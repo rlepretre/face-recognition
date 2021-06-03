@@ -25,10 +25,12 @@ def normalize(img):
                 left_eye = eye_one
                 original_left_eye = eye_one
                 right_eye = eye_two
+                original_right_eye = eye_two
             else:
                 left_eye = eye_two
                 original_left_eye = eye_two
                 right_eye = eye_one
+                original_right_eye = eye_one
 
             hyp = np.linalg.norm(left_eye-right_eye)
             theta = -np.arcsin((left_eye[1]-right_eye[1])/hyp)
@@ -61,16 +63,27 @@ def normalize(img):
 
             normalized_img = scaled_gray[int(left_eye[1]-24):int(left_eye[1]+32), int(left_eye[0]-16):int(right_eye[0]+15)]
 
-            return normalized_img, original_left_eye, theta, eyes_distance
+            return normalized_img, original_left_eye, original_right_eye, theta, eyes_distance
 
-    return None, [], 0, 0
+    return None, 0, 0, 0, 0
 
-def addOverlay(img, virtual_object, left_eye, mask_left_eye, ratio, theta):
+def addOverlay(img, virtual_object, eyes_center, mask_center, ratio, theta):
 
-    mask_left_eye = (mask_left_eye*ratio).astype(np.int32)
+    mask_center = (mask_center*ratio).astype(np.int32)
     scaled_height = int(virtual_object.shape[1] * ratio) 
     scaled_width = int(virtual_object.shape[0] * ratio) 
     virtual_object = cv2.resize(virtual_object, (scaled_height,scaled_width), interpolation = cv2.INTER_AREA)
+
+
+    alpha = np.cos(theta)
+    beta = np.sin(theta)
+
+    R = np.array([
+        [alpha, beta, (1 - alpha) * mask_center[0] - beta * mask_center[1]],
+        [-beta, alpha, beta * mask_center[0] + (1 - alpha) * mask_center[1]]
+            ])
+
+    virtual_object = cv2.warpAffine(virtual_object,R,(scaled_width,scaled_height),borderValue=(0,255,0))
 
     lower_green = np.array([0, 100, 0])     ##[R value, G value, B value]
     upper_green = np.array([120, 255, 100]) 
@@ -80,26 +93,18 @@ def addOverlay(img, virtual_object, left_eye, mask_left_eye, ratio, theta):
     mask = mask*255
     inv_mask = inv_mask*255
 
+    # eyes_center = R.dot(eyes_center)
+    mask_center = R.dot(mask_center)
 
-    alpha = np.cos(theta)
-    beta = np.sin(theta)
-
-    R = np.array([
-        [alpha, beta, (1 - alpha) * mask_left_eye[0] - beta * mask_left_eye[1]],
-        [-beta, alpha, beta * mask_left_eye[0] + (1 - alpha) * mask_left_eye[1]]
-            ])
-
-    virtual_object = cv2.warpAffine(virtual_object,R,(scaled_width,scaled_height))
-    mask = cv2.warpAffine(mask,R,(scaled_width,scaled_height))
-    inv_mask = cv2.warpAffine(inv_mask,R,(scaled_width,scaled_height))
-
-    left_eye = R.dot(left_eye)
-    mask_left_eye = R.dot(mask_left_eye)
-
-    y = int(left_eye[1] - mask_left_eye[1])
-    x = int(left_eye[0] - mask_left_eye[0])
+    y = int(eyes_center[1] - mask_center[1])
+    x = int(eyes_center[0] - mask_center[0])
 
     h, w = virtual_object.shape[0], virtual_object.shape[1]
+
+    print(inv_mask.shape)
+    print(virtual_object.shape)
+    print(mask.shape)
+    print(img[y:y+h, x:x+w].shape)
 
     img[y:y+h, x:x+w] = inv_mask * virtual_object + img[y:y+h, x:x+w] * mask
 

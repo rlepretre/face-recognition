@@ -23,7 +23,7 @@ while rval:
     results = 0
     dist = 0
     rval, frame = vc.read()
-    img, left_eye, theta, eyes_dist = normalize(frame)
+    img, left_eye, right_eye, theta, eyes_dist = normalize(frame)
 
     if img is not None and img.shape == (56,46):
         img = img.reshape(2576,1).astype(np.float32)
@@ -38,40 +38,38 @@ while rval:
 
     print(dist) 
 
-    if dist <= 9999999:
+    if dist <= 600000:
     
         if results == 4:
             virtual_object = cv2.imread('assets/glasses.jpg')
-            mask_left_eye = np.array([240, 240, 1])
+            mask_center = np.array([490, 240, 1])
             mask_eyes_dist = 500
         
         if results == 3:
             virtual_object = cv2.imread('assets/fox_mask.jpg')
-            mask_left_eye = np.array([435, 635, 1])
+            mask_center = np.array([650, 635, 1])
             mask_eyes_dist = 435
 
         if results == 2:
-            virtual_object = cv2.imread('assets/wolf_mask.jpg')
-            mask_left_eye = np.array([440, 530, 1])
-            mask_eyes_dist = 330
+            virtual_object = cv2.imread('assets/zorro_mask.jpg')
+            mask_center = np.array([450, 220, 1])
+            mask_eyes_dist = 420
+            
 
         if results == 1:
             virtual_object = cv2.imread('assets/batman_mask.jpg')
-            mask_left_eye = np.array([290, 720, 1])
+            mask_center = np.array([440, 720, 1])
             mask_eyes_dist = 300
     else: 
-        virtual_object = cv2.imread('assets/zorro_mask.jpg')
-        mask_left_eye = np.array([240, 220, 1])
-        mask_eyes_dist = 420
+        virtual_object = cv2.imread('assets/wolf_mask.jpg')
+        mask_center = np.array([605, 530, 1])
+        mask_eyes_dist = 330
 
-    
-
-
-    
     
     if(eyes_dist != 0):
         ratio = eyes_dist / mask_eyes_dist
-        ar_img = addOverlay(frame, virtual_object, left_eye, mask_left_eye, ratio, -theta)
+        eyes_center = (left_eye + right_eye)/2
+        ar_img = addOverlay(frame, virtual_object, eyes_center, mask_center, ratio, -theta)
         cv2.imshow("Mac Camera", ar_img)
     else:
         cv2.imshow("Mac Camera", frame)

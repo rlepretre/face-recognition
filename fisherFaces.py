@@ -66,6 +66,8 @@ def fisherFaces(training_set):
 
     #Find Y_fld
     Y_fld = np.linalg.multi_dot([W_fld.T, W_pca.T, A]) 
+    
+    print(Y_fld.shape)
 
     Y_fld = Y_fld.astype(np.float32)
     my_classes = my_classes.astype(np.float32)
